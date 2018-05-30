@@ -1,9 +1,14 @@
-[![travis-ci status](https://secure.travis-ci.org/airbnb/rendr.png)](http://travis-ci.org/#!/airbnb/rendr/builds)
-[![Dependency Status](https://david-dm.org/airbnb/rendr.png)](https://david-dm.org/airbnb/rendr)
+[![travis-ci status](https://secure.travis-ci.org/rendrjs/rendr.png)](http://travis-ci.org/#!/rendrjs/rendr/builds)
+[![Dependency Status](https://david-dm.org/rendrjs/rendr.png)](https://david-dm.org/rendrjs/rendr)
+[![Coverage Status](https://coveralls.io/repos/rendrjs/rendr/badge.png)](https://coveralls.io/r/rendrjs/rendr)
 
 <img src="http://cl.ly/image/272q3f1u313b/Rendr-logotype.png" width="395" height="100">
 
-Rendr is a small library from [Airbnb](https://www.airbnb.com) that allows you to run your [Backbone.js](http://backbonejs.org/) apps seamlessly on both the client and the server. Allow your web server to serve fully-formed HTML pages to any deep link of your app, while preserving the snappy feel of a traditional Backbone.js client-side MVC app. 
+Rendr is a small library that allows you to run your [Backbone.js](http://backbonejs.org/) apps seamlessly on both the client and the server. Allow your web server to serve fully-formed HTML pages to any deep link of your app, while preserving the snappy feel of a traditional Backbone.js client-side MVC app.
+
+## Documentation
+
+The documentation website is: [rendrjs.github.io](http://rendrjs.github.io).  If you have any feedback or changes for the documentation please create an [issue](https://github.com/rendrjs/rendrjs.github.io/issues).  The documentation is easy to submit changes to as well!  Simply create a fork and use the Github Markdown editor to make and preview any changes, then open just open a Pull Request.
 
 ## Reporting problems and getting help
 
@@ -12,12 +17,12 @@ rendr, try asking in the [Google group][ggroup] or join #rendr on
 irc.freenode.org.
 
 [ggroup]: https://groups.google.com/forum/#!forum/rendrjs
-[issues]: https://github.com/airbnb/rendr/issues
+[issues]: https://github.com/rendrjs/rendr/issues
 
 
 ## Getting Started
 
-To see how to use Rendr to build a simple web app, check out the [examples](https://github.com/airbnb/rendr/tree/master/examples) directory for a number of different ways to set up a Rendr app.
+To see how to use Rendr to build a simple web app, check out the [examples](https://github.com/rendrjs/rendr-examples) repository for a number of different ways to set up a Rendr app.
 
 Check out the [blog post](http://nerds.airbnb.com/weve-launched-our-first-nodejs-app-to-product) for a more thorough introduction to Rendr.
 
@@ -28,7 +33,7 @@ Our hypothesis is that there has to be a better way to build rich web apps today
 
 ## The Goals
 
-Rendr is intended to be a building block along the way to this envisionsed future of web apps that can be run on either side of the wire according to the needs of your application.
+Rendr is intended to be a building block along the way to this envisioned future of web apps that can be run on either side of the wire according to the needs of your application.
 
 Some specific design goals:
 
@@ -52,10 +57,10 @@ Inherits from `Backbone.View`.
 
 #### Public methods
 
-#### `view.postInitialize()`
+#### `view.initialize()`
 *Environment: shared.*
 
-This is where you put any initialization logic. We've hijacked the default `view.initialize()` to do Rendr-specific initialization stuff.
+This is where you put any initialization logic.
 
 #### `view.preRender()`
 *Environment: shared.*
@@ -124,9 +129,9 @@ Inherits from `Backbone.Model`.
 
 ### `BaseAppView`
 
-Inherits for `BaseView`. You can change your main content container from this view by changing the `contentEl` key in the `options` object when extending `BaseAppView`
+Inherits from `BaseView`. You can change your main content container from this view by changing the `contentEl` key in the `options` object when extending `BaseAppView`
 
-```javascript
+```js
 var AppView = BaseAppView.extend({
   options : {
     contentEl : "#mainContent"
@@ -151,7 +156,7 @@ Inherits from `BaseRouter`.
 ### Server Config
 
 ####Example
-  
+
 ```
 var config = {
   dataAdapterConfig: {
@@ -160,7 +165,7 @@ var config = {
       protocol: 'https'
     }
   },
-  
+
   apiPath: '/api',
   appData: { myAttr: 'value'},
   dataAdapter: myDataAdapterInstance,
@@ -174,7 +179,7 @@ rendr.createServer(config);
 
 ```
 
-Either a ``dataAdapter`` or ``dataAdapterConfig`` must be present.  
+Either a ``dataAdapter`` or ``dataAdapterConfig`` must be present.
 
 
 - ``dataAdapterConfig`` - This is the standard way of configuring Rendr's built in  DataAdapter.  See [DataAdapter Config](#dataadapter-config)
@@ -182,9 +187,9 @@ Either a ``dataAdapter`` or ``dataAdapterConfig`` must be present.
 
 - ``dataAdapter`` - Allows you to override the default DataAdapter and provide your own.  The ``dataAdapterConfig`` will be ignored.
 
-    **Default:**  [RestAdapter](https://github.com/airbnb/rendr/blob/master/server/data_adapter/rest_adapter.js) which enables Rendr to speak basic REST using HTTP & JSON.  This is good for consuming an     existing RESTful API that exists externally to your Node app.
-    
-    
+    **Default:**  [RestAdapter](https://github.com/rendrjs/rendr/blob/master/server/data_adapter/rest_adapter.js) which enables Rendr to speak basic REST using HTTP & JSON.  This is good for consuming an     existing RESTful API that exists externally to your Node app.
+
+
 ---
 
 - ``apiPath`` *Optional* - Root of the API proxy's virtual path. Anything after this root will be followed by a ``-``. Example: ``/api/-/path/to/resource``. Allows the proxy to intercept API routes. Can also be a full path to a remote API ``http://api.myserver``
@@ -202,34 +207,34 @@ Either a ``dataAdapter`` or ``dataAdapterConfig`` must be present.
 
     **Default:** ``process.cwd() + '/'`` - Current working directory of the node process
 
-- ``errorHandler`` *Optional* Callback for [Express.js errors](http://expressjs.com/guide.html#error-handling).
+- ``errorHandler`` *Optional* Callback for [Express.js errors](http://expressjs.com/guide/error-handling).
 
    **Example** ``function (err, req, res, next) { }``
 
 
-- ``notFoundHandler`` *Optional* - Callback for [Express.js not found errors](http://expressjs.com/guide.html#error-handling)
+- ``notFoundHandler`` *Optional* - Callback for [Express.js not found errors](http://expressjs.com/guide/error-handling)
 
    **Example** ``function (req, res, next) { }``
 
 - ``viewEngine`` *Optional* - Provides a way to set a custom [Express.js view engine](http://expressjs.com/api.html#app.engine)
 
-    **Default:** ``new ViewEngine()`` - Rendr provides a built in [ViewEngine](https://github.com/airbnb/rendr/blob/master/server/viewEngine.js) that hooks to [Template Adapters](#template-adapters).  See [rendr-handlebars](https://github.com/airbnb/rendr-handlebars).
+    **Default:** ``new ViewEngine()`` - Rendr provides a built in [ViewEngine](https://github.com/rendrjs/rendr/blob/master/server/viewEngine.js) that hooks to [Template Adapters](#template-adapters).  See [rendr-handlebars](https://github.com/rendrjs/rendr-handlebars).
 
 - ``viewsPath`` *Optional* - Override where your views are stored. Path is relative to ``entryPath``.
 
     **Default:** ``app/views``
-    
+
 
 ### DataAdapter Config
 
-This configuration is passed to the current DataAdapter, which by default is the [RestAdapter](https://github.com/airbnb/rendr/blob/master/server/data_adapter/rest_adapter.js). 
+This configuration is passed to the current DataAdapter, which by default is the [RestAdapter](https://github.com/rendrjs/rendr/blob/master/server/data_adapter/rest_adapter.js).
 
 
 ####Example
 
 **Simple**
 
-```
+```js
 var dataAdapterConfig = {
   host: 'api.github.com',
   protocol: 'https'
@@ -239,7 +244,7 @@ var dataAdapterConfig = {
 
 **Multiple**
 
-```
+```js
 var dataAdapterConfig = {
   'default': {
     host: 'api.github.com',
@@ -255,16 +260,15 @@ var dataAdapterConfig = {
 
 Example of how a Backbone model can be configured to select one of the DataAdapter configs.
 
-*Note: This example assumes you are using the [RestAdapter](https://github.com/airbnb/rendr/blob/master/server/data_adapter/rest_adapter.js).*
+*Note: This example assumes you are using the [RestAdapter](https://github.com/rendrjs/rendr/blob/master/server/data_adapter/rest_adapter.js).*
 
-````
+```js
 module.exports = Base.extend({
   url: '/repos/:owner/:name',
   api: 'travis-ci'
 });
 module.exports.id = 'Build';
-
-````
+```
 
 ### Adding middleware to Rendr's Express
 
@@ -272,24 +276,22 @@ module.exports.id = 'Build';
 You can optionally add any custom middleware that has to access `req.rendrApp` but should run before
 the Rendr routes by calling configure after createServer.
 
-```
-
+```js
 rendr.createServer(config);
 rendr.configure(function(expressApp) {
 
     expressApp.use(...)
 
 })
-
 ```
 
 ### Template Adapters
 
-Provides a way for Rendr to utilize custom html template engines.  Rendr's [ViewEngine](https://github.com/airbnb/rendr/blob/master/server/viewEngine.js) will delegate to the [Template Adapter](https://github.com/airbnb/rendr-handlebars/blob/master/index.js). You can build your own to provide your template engine of choice (i.e. Jade, Underscore templates, etc).
+Provides a way for Rendr to utilize custom html template engines (see also Template Engines section below).  Rendr's [ViewEngine](https://github.com/rendrjs/rendr/blob/master/server/viewEngine.js) will delegate to the [Template Adapter](https://github.com/rendrjs/rendr-handlebars/blob/master/index.js). You can build your own to provide your template engine of choice (i.e. Jade, Underscore templates, etc).
 
 ####Available Template Adapters
 
-- [rendr-handlebars](https://github.com/airbnb/rendr-handlebars) - [Handlebars.js](https://github.com/wycats/handlebars.js) support.  This is the default adapter.
+- [rendr-handlebars](https://github.com/rendrjs/rendr-handlebars) - [Handlebars.js](https://github.com/wycats/handlebars.js) support.  This is the default adapter.
 
 - [rendr-emblem](https://github.com/modalstudios/rendr-emblem) - [Emblem.js](https://github.com/machty/emblem.js/) with [Handlebars.js](https://github.com/wycats/handlebars.js) fallback support.
 
@@ -298,7 +300,7 @@ Provides a way for Rendr to utilize custom html template engines.  Rendr's [View
 
 You can tell Rendr which Template Adapter to use.  This represents the node-module that contains the adapter.
 
-````
+```js
 // /app/app.js
 
 module.exports = BaseApp.extend({
@@ -308,8 +310,44 @@ module.exports = BaseApp.extend({
 
 });
 
-````
+```
 
+### Template Engines
+
+While Template Adapters provide the layer of abstraction that allow you to use your favorite template engine in a Rendr app, the Template Engine option itself will tell the app which version to use exactly. 
+The default is set to be Handlebars, which is currently supported by the Rendr-handlebars adapter until version 2.0.0.
+**When setting up your Rendr app, you'll need to add your Template Engine of choice to package.json.**
+ 
+E.g.
+ 
+```js
+// /package.json
+
+"dependencies": {
+  ...
+  "express": "^4.12.0",
+  "handlebars": "^2.0.0"
+  "qs2": "~0.6.6",
+  ...
+},
+  
+```
+
+####Using Custom Template Engines
+
+You can tell Rendr which Template Engine to use.  This represents the node-module that contains the engine.
+
+```js
+// /app/app.js
+
+module.exports = BaseApp.extend({
+  defaults: {
+    templateEngine: 'handlebars'
+  }
+
+});
+
+```
 
 ### Express middleware
 
@@ -324,29 +362,17 @@ There are a few middleware functions included. Use some or all of these, or use 
 
 Rather than owning your entire Express app, Rendr simply provides some useful middleware that you can mount into your existing Express app.
 
-### Asset pipeline
-
-Asset bundling and serving are outside of Rendr's scope. However, it does have some specific requirements for JavaScript packaging to support modules that are accessible in the CommonJS style on both the client and server. The [example app](https://github.com/airbnb/rendr/tree/master/examples/00_simple) uses [Stitch](https://github.com/sstephenson/stitch) for this, though you could also do this with other tools, such as [Browserify](https://github.com/substack/node-browserify).
-
 ## Notes
 
 Rendr uses the native ECMAScript 5 methods `Array.prototype.map`, `Function.prototype.bind`, `Object.create`, etc. If you plan to support older browsers, such as IE<=8, you should include the lovely [es5-shim](https://github.com/kriskowal/es5-shim) (and es5-sham) libraries as client-side dependencies.
-
-## TODO
-
-While we do have it powering a few apps in production here at Airbnb, Rendr is still a prototype. It's a [spike](http://scaledagileframework.com/spikes/); a functional proof-of-concept of a shared client-server architecture based on Backbone. Thus, it carries over a number of design quirks specific to its original use case, and it's not yet very generalized and modular.
-
-Some of the more glaring things to do:
-
-* Support Browserify and streamline module packaging.
-* Support templating solutions other than Handlebars.
-* Pull out routing code into separate module and share it between client and server, to prevent bugs arising from using `Backbone.history` to process routes in the client, and Express to process routes on the server.
 
 ## Contributing
 
 We'd love to see what the community can come up with! There are no doubt a number of developers who are tackling this same problem, and we can learn from each other. If you have a bug fix or feature proposal, submit a pull request with a clear description of the change, plus tests.
 
-Rendr was originally developed by [@braitz](https://github.com/braitz) and [@spikebrehm](https://github.com/spikebrehm), and now has a healthy list of [contributors](https://github.com/airbnb/rendr/graphs/contributors).
+Rendr was originally developed by [@braitz](https://github.com/braitz) and [@spikebrehm](https://github.com/spikebrehm), and now has a healthy list of [contributors](https://github.com/rendrjs/rendr/graphs/contributors).
+
+Please note that this project is released with a Contributor Code of Conduct. By participating in this project you agree to abide by its terms.
 
 ## License
 
@@ -354,5 +380,5 @@ MIT
 
 
 
-[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/airbnb/rendr/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
+[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/rendrjs/rendr/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
 

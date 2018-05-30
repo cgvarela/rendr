@@ -18,7 +18,11 @@ describe('apiProxy', function() {
       },
       dataAdater = { request: requestToApi },
       proxy = apiProxy(dataAdater),
-      responseToClient = { status: sinon.spy(), json: sinon.spy() };
+      responseToClient = {
+        status: sinon.spy(),
+        json: sinon.spy(),
+        jsonp: sinon.spy()
+      };
     });
 
     it('should pass through the status code', function () {
@@ -37,6 +41,16 @@ describe('apiProxy', function() {
 
       responseToClient.json.should.have.been.calledOnce;
       responseToClient.json.should.have.been.calledWith(body);
+    });
+
+    it('should allow jsonp responses', function () {
+      var body = { what: 'ever' };
+      dataAdater.request.yields(null, {jsonp: true, status: 200}, body);
+
+      proxy(requestFromClient, responseToClient);
+
+      responseToClient.jsonp.should.have.been.calledOnce;
+      responseToClient.jsonp.should.have.been.calledWith(body);
     });
 
     it('should add an x-forwarded-for header to the request', function () {
@@ -69,6 +83,33 @@ describe('apiProxy', function() {
       outgoingHeaders['x-forwarded-for'].should.eq(expectedHeaderValue);
       outgoingHeaders['x-forwarded-for'].should.not.eq(
         incomingHeaders['x-forwarded-for']);
+    });
+
+    it('should add an x-http-method-override header to the request if there is one', function () {
+      var incomingHeaders = { 'x-http-method-override': 'PUT' },
+        outgoingHeaders;
+
+      requestFromClient.headers = incomingHeaders;
+
+      proxy(requestFromClient, responseToClient);
+
+      requestToApi.should.have.been.calledOnce;
+      outgoingHeaders = requestToApi.firstCall.args[1].headers;
+      outgoingHeaders['x-http-method-override'].should.eq(incomingHeaders['x-http-method-override']);
+    });
+
+    it('should not add an x-http-method-override header to the request if there is not one', function () {
+      var incomingHeaders = {},
+        outgoingHeaders;
+
+      requestFromClient.headers = incomingHeaders;
+
+      proxy(requestFromClient, responseToClient);
+
+      requestToApi.should.have.been.calledOnce;
+      outgoingHeaders = requestToApi.firstCall.args[1].headers;
+
+      expect(outgoingHeaders['x-http-method-override']).to.be.undefined;
     });
 
 

@@ -9,18 +9,21 @@ if (!isServer) {
 
 var BaseModel = Backbone.Model.extend({
 
-  initialize: function(models, options) {
+  constructor: function(attributes, options) {
     // Capture the options as instance variable.
     this.options = options || {};
 
     // Store a reference to the app instance.
     this.app = this.options.app;
 
-    if (!this.app && this.collection) {
-      this.app = this.collection.app;
+    if (!this.app && this.options.collection) {
+      this.app = this.options.collection.app;
     }
 
-    this.on('change', this.store, this);
+    Backbone.Model.apply(this, arguments);
+
+    this.store();
+    this.on('change:' + this.idAttribute, this.store, this);
   },
 
   /**
@@ -38,7 +41,9 @@ var BaseModel = Backbone.Model.extend({
    * Instance method to store in the modelStore.
    */
   store: function() {
-    this.app.fetcher.modelStore.set(this);
+    if (this.id !== undefined && this.app && this.app.fetcher) {
+      this.app.fetcher.modelStore.set(this);
+    }
   }
 });
 

@@ -22,9 +22,40 @@ function shouldMatchRoute(actual, expected) {
 }
 
 describe("server/router", function() {
+  var router;
 
   beforeEach(function() {
-    this.router = new Router(config);
+    router = this.router = new Router(config);
+  });
+
+  describe('getHeadersForRoute', function () {
+    it('should return an empty object', function () {
+      var headers = this.router.getHeadersForRoute({});
+      headers.should.deep.equal({});
+    });
+
+    it('should set the Cache-Control header if maxAge is given', function () {
+      var maxAge = 1000,
+        headers = this.router.getHeadersForRoute({maxAge: maxAge}),
+        expectedHeaders = {
+          'Cache-Control': 'public, max-age=' + maxAge
+        };
+
+      headers.should.deep.equal(expectedHeaders);
+    })
+
+    it("should set other headers passed into the route's definition", function () {
+      var maxAge = 1000,
+          customHeaders = {
+            'Vary': 'User-Agent', 
+            'Cache-Control': 'no-transform,public,max-age=300,s-maxage=900',
+            'ETag': '12345678'
+          },
+        headers = this.router.getHeadersForRoute({headers: customHeaders, maxAge: maxAge});
+
+      headers.should.deep.equal(customHeaders);
+    })
+
   });
 
   describe("route", function() {
@@ -184,99 +215,14 @@ describe("server/router", function() {
     });
   });
 
-  describe("match", function() {
-    it("should return the route info for a matched path, no leading slash", function() {
-      var route;
-
-      this.router.route("/users/:id", "users#show");
-      route = this.router.match('users/1234');
-      shouldMatchRoute(route, [
-        '/users/:id', {
-          controller: 'users',
-          action: 'show'
-        }
-      ]);
-    });
-
-    it("should return the route info for a matched path, with leading slash", function() {
-      var route;
-
-      this.router.route("/users/:id", "users#show");
-      route = this.router.match('/users/1234');
-      shouldMatchRoute(route, [
-        '/users/:id', {
-          controller: 'users',
-          action: 'show'
-        }
-      ]);
-    });
-
-    it("should return null if no match", function() {
-      should.not.exist(this.router.match('abcd1234xyz'));
-    });
-
-    it("should match in the right order", function() {
-      var route;
-
-      this.router.route("/users/login", "users#login");
-      this.router.route("/users/:id", "users#show");
-      route = this.router.match('users/thisisaparam');
-      shouldMatchRoute(route, [
-        '/users/:id', {
-          controller: 'users',
-          action: 'show'
-        }
-      ]);
-      route = this.router.match('users/login');
-      shouldMatchRoute(route, [
-        '/users/login', {
-          controller: 'users',
-          action: 'login'
-        }
-      ]);
-    });
-
-    it("should match regexp routes", function() {
-      var route;
-
-      this.router.route(/^\/regexp\/(foo|bar)/, "test#regexp");
-
-      route = this.router.match('/regexp/food');
-      shouldMatchRoute(route, [
-        /^\/regexp\/(foo|bar)/, {
-          controller: 'test',
-          action: 'regexp'
-        }
-      ]);
-
-      route = this.router.match('/regexp/bart');
-      shouldMatchRoute(route, [
-        /^\/regexp\/(foo|bar)/, {
-          controller: 'test',
-          action: 'regexp'
-        }
-      ]);
-
-      // No leading slash.
-      route = this.router.match('regexp/foodie');
-      shouldMatchRoute(route, [
-        /^\/regexp\/(foo|bar)/, {
-          controller: 'test',
-          action: 'regexp'
-        }
-      ]);
-
-      should.not.exist(this.router.match('/regexp/b'));
-    });
-  });
-
   describe("getParams", function() {
     beforeEach(function() {
       this.req = express.request;
 
       resetProperties(this.req, {
         query: {},
-        route: {keys: [], params: {}, regexp: false},        
+        params: null,
+        route: {keys: [], params: {}, regexp: false},
       });
       this.router.getParams(this.req).should.eql({});
     });
@@ -285,23 +231,8 @@ describe("server/router", function() {
       this.req.__defineGetter__('query', function() {
         return {foo: 'bar', bam: 'baz'};
       });
-      this.router.getParams(this.req).should.eql({foo: 'bar', bam: 'baz'});
-    });
 
-    it("should support regex route params", function() {
-      this.req.__defineGetter__('route', function() {
-        return {
-          regexp: true
-        };
-      });
-      this.req.__defineGetter__('params', function() {
-        return {
-          '0': 'zero-value'
-        };
-      });
-      this.router.getParams(this.req).should.eql({
-        '0': 'zero-value'
-      });
+      this.router.getParams(this.req).should.eql({foo: 'bar', bam: 'baz'});
     });
 
     it("should support route params", function() {
@@ -312,9 +243,9 @@ describe("server/router", function() {
       });
       this.req.__defineGetter__('params', function() {
         return {
-          id: 'id-value',
-          login: 'login-value'
-        }
+          'id': 'id-value',
+          'login': 'login-value'
+        };
       });
       this.router.getParams(this.req).should.eql({
         id: 'id-value',
@@ -334,9 +265,9 @@ describe("server/router", function() {
       });
       this.req.__defineGetter__('params', function() {
         return {
-          id: 'id-value',
-          login: 'login-value'
-        }
+          'id': 'id-value',
+          'login': 'login-value'
+        };
       });
 
       this.router.getParams(this.req).should.eql({
@@ -367,6 +298,24 @@ describe("server/router", function() {
           foo: 'sneaky'
         });
       });
+
+      it("recusively sanitizes nested objects", function() {
+        this.req.__defineGetter__('query', function() {
+          return {
+            nested: {
+              foo: '<script>alert("foo")</script>sneakyfoo',
+              bar: '<script>alert("bar")</script>sneakybar',
+            },
+          };
+        });
+
+        this.router.getParams(this.req).should.eql({
+          nested: {
+            foo: 'sneakyfoo',
+            bar: 'sneakybar',
+          },
+        });
+      });
     });
   });
 
@@ -384,27 +333,97 @@ describe("server/router", function() {
       this.req = { route: expressRoute, params: params, rendrApp: rendrApp };
     });
 
-    it("should return a middleware function that calls the action with the correct context", function () {
-      var rendrApp = this.req.rendrApp,
+    describe('route middleware', function () {
+      it('should pass through an error', function () {
+        var someError = new Error('some error'),
+          action = sinon.stub().yields(someError),
+          middleware = this.router.getHandler(action, this.pattern, {}),
+          next = sinon.spy();
+
+        middleware(this.req, {}, next);
+
+        action.should.have.been.calledOnce;
+        next.should.have.been.calledOnce;
+        next.should.have.been.calledWithExactly(someError);
+      });
+
+      it('should redirect if a redirect path is given', function () {
+        var middleware = this.router.getHandler(null, this.pattern, { controller: 'foo', action: 'index', redirect: '/foo' }),
+          res = { redirect: sinon.spy() };
+
+        middleware(this.req, res);
+
+        res.redirect.should.have.been.calledOnce;
+        res.redirect.should.have.been.calledWithExactly(301, '/foo');
+      });
+
+      it("should call the action with the correct context", function () {
+        var rendrApp = this.req.rendrApp,
           rendrRoute = { controller: 'users', action: 'show' },
           res = { render: sinon.spy(), redirect: sinon.spy() },
           handler;
 
-      handler = this.router.getHandler(function (params, callback) {
-        params.should.eql({ id: '1' });
-        this.currentRoute.should.equal(rendrRoute);
-        this.app.should.equal(rendrApp);
-        this.redirectTo.should.be.a('function');
-        callback(null, 'template/path', { some: 'data' });
-      }, this.pattern, rendrRoute);
+        handler = this.router.getHandler(function (params, callback) {
+          params.should.eql({ id: '1' });
+          this.currentRoute.should.equal(rendrRoute);
+          this.app.should.equal(rendrApp);
+          this.redirectTo.should.be.a('function');
+          callback(null, 'template/path', { some: 'data' });
+        }, this.pattern, rendrRoute);
 
-      handler(this.req, res);
+        handler(this.req, res);
 
-      res.render.should.have.been.calledOnce;
-      res.render.should.have.been.calledWith('template/path', {
-        locals: { some: 'data' },
-        app: this.req.rendrApp,
-        req: this.req
+        res.render.should.have.been.calledOnce;
+        res.render.should.have.been.calledWith('template/path', {
+          locals: { some: 'data' },
+          app: this.req.rendrApp,
+          req: this.req
+        });
+      });
+
+      describe('render', function () {
+        var action, middleware, res, getHeadersForRoute, next;
+
+        beforeEach(function () {
+          next = sinon.stub();
+          action = sinon.stub().yields();
+          middleware = this.router.getHandler(action, this.pattern, {});
+          res = { set: sinon.spy(), type: sinon.stub(), end: sinon.spy(), render: sinon.stub() };
+          res.render.yields();
+          res.type.returns(res);
+          getHeadersForRoute = sinon.stub(this.router, 'getHeadersForRoute').returns({ 'Content-Type': 'image/jpeg' });
+        });
+
+        it('should set the headers', function () {
+          middleware(this.req, res);
+
+          res.set.should.have.been.calledOnce;
+          res.set.should.have.been.calledWithExactly({ 'Content-Type': 'image/jpeg' });
+        });
+
+        it('should set the type to html', function () {
+          middleware(this.req, res);
+
+          res.type.should.have.been.calledOnce;
+          res.type.should.have.been.calledWithExactly('html');
+        });
+
+        it('should call end with the html output', function () {
+          res.render.yields(null, '<b>foo</b>');
+          middleware(this.req, res);
+
+          res.end.should.have.been.calledOnce;
+          res.end.should.have.been.calledWithExactly('<b>foo</b>');
+        });
+
+        it('should pass through an error', function () {
+          var error = new Error();
+          res.render.yields(error);
+          middleware(this.req, res, next);
+
+          next.should.have.been.calledOnce;
+          next.should.have.been.calledWithExactly(error);
+        });
       });
     });
 
@@ -425,15 +444,22 @@ describe("server/router", function() {
     });
 
     describe('redirectTo', function () {
-      it("should redirect to another page", function () {
-        var rendrRoute = { controller: 'users', action: 'show' },
-            res = { redirect: sinon.spy() },
-            handler;
+      var rendrRoute, res;
 
-        handler = this.router.getHandler(function () {
-          this.redirectTo('/some_uri');
+      beforeEach(function () {
+        rendrRoute = { controller: 'users', action: 'show' },
+        res = { redirect: sinon.spy() };
+        this.req.rendrApp.get = sinon.stub();
+      });
+
+      function createHandler(options) {
+        return router.getHandler(function () {
+          this.redirectTo('/some_uri', options);
         }, this.pattern, rendrRoute);
+      }
 
+      it("should redirect to another page", function () {
+        var handler = createHandler();
         handler(this.req, res);
 
         res.redirect.should.have.been.calledOnce;
@@ -442,20 +468,25 @@ describe("server/router", function() {
       });
 
       it("should redirect to another page using a specific http status code", function () {
-        var rendrRoute = { controller: 'users', action: 'show' },
-            res = { redirect: sinon.spy() },
-            handler;
-
-        handler = this.router.getHandler(function () {
-          this.redirectTo('/some_uri', {status: 301});
-        }, this.pattern, rendrRoute);
-
+        var handler = createHandler({status: 301});
         handler(this.req, res);
 
         res.redirect.should.have.been.calledOnce;
         res.redirect.should.have.been.calledWithExactly(301, '/some_uri');
         res.redirect.should.have.been.calledOn(res);
       });
+
+      it("should redirect to the correct path with a rootPath set", function () {
+        var handler = createHandler();
+        this.req.rendrApp.get.withArgs('rootPath').returns('/myRoot');
+
+        handler(this.req, res);
+
+        res.redirect.should.have.been.calledOnce;
+        res.redirect.should.have.been.calledWithExactly('/myRoot/some_uri');
+        res.redirect.should.have.been.calledOn(res);
+      });
+
     });
   });
 });

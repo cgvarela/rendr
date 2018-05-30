@@ -21,21 +21,20 @@ var _ = require('underscore'),
 
 if (isServer) {
   // hide it from requirejs since it's server only
-  var serverOnly_qs = 'qs';
+  var serverOnly_qs = 'qs2';
   var qs = require(serverOnly_qs);
 } else {
-  Backbone.$ = window.$ || require('jquery');
+  var $ = window.$ || require('jquery');
+  Backbone.$ = $;
 }
 
 var syncer = module.exports;
 
 function clientSync(method, model, options) {
-  var data, error;
-  data = _.clone(options.data);
-  options.url = this.getUrl(options.url, true, data);
-  data = addApiParams(method, model, data);
-  options.data = data;
-  options.emulateJSON = true;
+  var error;
+  options = _.clone(options);
+  if (!_.isUndefined(options.data)) options.data = _.clone(options.data);
+  options.url = this.getUrl(options.url, true, options.data);
   error = options.error;
   if (error) {
     options.error = function(xhr) {
@@ -53,36 +52,37 @@ function clientSync(method, model, options) {
       };
       error(resp);
     }
-  };
+  }
   return Backbone.sync(method, model, options);
 }
 
 function serverSync(method, model, options) {
-  var api, data, urlParts, verb, req;
+  var api, urlParts, verb, req, queryStr;
 
-  data = _.clone(options.data);
-  data = addApiParams(method, model, data);
-  options.url = this.getUrl(options.url, false, data);
+  options = _.clone(options);
+  if (!_.isUndefined(options.data)) options.data = _.clone(options.data);
+  options.url = this.getUrl(options.url, false, options.data);
   verb = methodMap[method];
   urlParts = options.url.split('?');
   req = this.app.req;
+  queryStr = urlParts[1] || '';
+  if (!_.isEmpty(options.data)) queryStr += '&' + qs.stringify(options.data);
+  /**
+   * if queryStr is initially an empty string, leading '&' will still get parsed correctly by qs.parse below.
+   * e.g.  qs.parse('&baz=quux') => { baz: 'quux' }
+   */
 
   api = {
     method: verb,
     path: urlParts[0],
-    query: qs.parse(urlParts[1]) || {},
+    query: qs.parse(queryStr),
+    headers: options.headers || {},
     api: _.result(this, 'api'),
     body: {}
   };
 
-  /**
-   * Put the data as form data if POST or PUT,
-   * otherwise query string.
-   */
   if (verb === 'POST' || verb === 'PUT') {
-    api.body = data;
-  } else {
-    _.extend(api.query, data);
+    api.body = model.toJSON();
   }
 
   req.dataAdapter.request(req, api, function(err, response, body) {
@@ -107,22 +107,8 @@ function serverSync(method, model, options) {
   });
 }
 
-function addApiParams(method, model, params) {
-  params = params || {};
-  var ret = _.clone(params);
-
-  /**
-   * So, by default Backbone sends all of the model's
-   * attributes if we don't pass any in explicitly.
-   * This gets screwed up because we append the locale
-   * and currency, so let's replicate that behavior.
-   */
-  if (model && _.isEqual(params, {}) && (method === 'create' || method === 'update')) {
-    _.extend(ret, model.toJSON());
-  }
-  return ret;
-}
-
+syncer.clientSync = clientSync;
+syncer.serverSync = serverSync;
 syncer.sync = function sync() {
   var syncMethod = isServer ? serverSync : clientSync;
   return syncMethod.apply(this, arguments);
@@ -151,47 +137,6 @@ syncer.formatClientUrl = function(url, api) {
   }
   prefix += '/-';
   return prefix + url;
-};
-
-/**
- * This is used to fire off a 'fetch', compare the results to the data we have,
- * and then trigger a 'refresh' event if the data has changed.
- *
- * Happens only client-side.
- */
-syncer.checkFresh = function checkFresh() {
-  var url;
-
-  this.app.trigger('checkFresh:start');
-
-  // Lame: have to lazy-require to prevent circular dependency.
-  // It is circular dep
-  // hide it from requirejs since it's optional/lazy-loaded
-  url = this.getUrl(null, true);
-
-  $.getJSON(url, this.params, function(resp) {
-    var data, differs;
-
-    // The second argument 'false' tells 'parse()' not to modify the instance.
-    data = this.parse(resp, false);
-    differs = this.objectsDiffer(data, this.toJSON());
-    this.trigger('checkFresh:end', differs);
-    if (differs) {
-      if (this.app.modelUtils.isModel(this)) {
-        this.set(data, {
-          silent: true
-        });
-      } else {
-        this.reset(data, {
-          parse: true,
-          silent: true
-        });
-      }
-      // We manually store the updated data.
-      this.store();
-      this.trigger('refresh');
-    }
-  }.bind(this));
 };
 
 /**
@@ -243,7 +188,7 @@ syncer.interpolateParams = function interpolateParams(model, url, params) {
       } else {
         value = model.get(property);
       }
-      url = url.replace(param, value);
+      url = url.replace(param, encodeURIComponent(value));
 
       /**
        * Delete the param from params hash, so we don't get urls like:
@@ -252,5 +197,10 @@ syncer.interpolateParams = function interpolateParams(model, url, params) {
       delete params[property];
     });
   }
+  /**
+   * Separate deletion of idAttribute from params hash necessary if using urlRoot in the model
+   * so we don't get urls like: /v1/threads/1234?id=1234
+   */
+  delete params[model.idAttribute]
   return url;
 };

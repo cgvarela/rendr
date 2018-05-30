@@ -1,15 +1,28 @@
 var _ = require('underscore'),
-    should = require('chai').should(),
+    chai = require('chai'),
+    sinon = require('sinon'),
+    sinonChai = require('sinon-chai'),
     BaseCollection = require('../../../shared/base/collection'),
     BaseModel = require('../../../shared/base/model'),
     App = require('../../../shared/app'),
     ModelUtils = require('../../../shared/modelUtils'),
     AddClassMapping = require('../../helpers/add_class_mapping');
 
+chai.should();
+chai.use(sinonChai);
+
 describe('BaseCollection', function() {
   beforeEach(function() {
     this.app = new App();
     this.addClassMapping = new AddClassMapping(this.app.modelUtils)
+  });
+
+  it('should store the collection on initialization', function () {
+    sinon.spy(BaseCollection.prototype, 'store');
+    var collection = new BaseCollection();
+    BaseCollection.prototype.store.should.have.been.calledOnce;
+    BaseCollection.prototype.store.should.have.been.calledOn(collection);
+    BaseCollection.prototype.store.restore();
   });
 
   describe('parse', function() {
@@ -73,7 +86,7 @@ describe('BaseCollection', function() {
   });
 
   describe('fetch', function() {
-    it("sould store params used", function() {
+    it("should store params used", function() {
       var collection, params;
 
       params = {
@@ -88,6 +101,31 @@ describe('BaseCollection', function() {
         data: params
       });
       params.should.deep.equal(collection.params);
+    });
+
+    context('has default params', function () {
+      beforeEach(function () {
+        BaseCollection.prototype.defaultParams = { 'default': true };
+      });
+
+      afterEach(function () {
+        BaseCollection.prototype.defaultParams = undefined;
+      });
+
+      it('should use the original params if nothing new is set', function () {
+        var collection, opts = {
+          params: { additional: true }
+        };
+
+        collection = new BaseCollection([], opts);
+        collection.sync = function() {};
+        collection.fetch();
+
+        collection.params.should.deep.equal({
+          'additional': true,
+          'default': true
+        });
+      });
     });
   });
 
@@ -162,12 +200,12 @@ describe('BaseCollection', function() {
         app: this.app
       });
       collection.store();
-      models.forEach(function(modelAttrs) {
+      models.forEach(function(modelAttrs, i) {
         var storedModel = _this.app.fetcher.modelStore.get(collection.model.name, modelAttrs.id);
-        storedModel.should.eql(modelAttrs);
+        storedModel.should.eql(collection.models[i]);
       });
       storedCollection = this.app.fetcher.collectionStore.get(this.MyCollection.name, collection.params);
-      storedCollection.ids.should.eql(_.pluck(models, 'id'));
+      _.pluck(storedCollection.models, 'id').should.eql(_.pluck(models, 'id'));
       storedCollection.meta.should.eql(meta);
     });
   });

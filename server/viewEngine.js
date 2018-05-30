@@ -42,16 +42,20 @@ ViewEngine.prototype.renderWithLayout = function renderWithLayout(locals, app, c
  * Cache layout template function.
  */
 ViewEngine.prototype.getLayoutTemplate = function getLayoutTemplate(app, callback) {
-  var layoutPath;
+  var baseLayoutName = this.getBaseLayoutName(app);
 
   if (layoutTemplates[app.options.entryPath]) {
     return callback(null, layoutTemplates[app.options.entryPath]);
   }
-  app.templateAdapter.getLayout('__layout', app.options.entryPath, function(err, template) {
+  app.templateAdapter.getLayout(baseLayoutName, app.options.entryPath, function(err, template) {
     if (err) return callback(err);
     layoutTemplates[app.options.entryPath] = template;
     callback(err, template);
   });
+};
+
+ViewEngine.prototype.getBaseLayoutName = function getBaseLayoutName(app) {
+  return app.options.baseLayoutName ? app.options.baseLayoutName : '__layout';
 };
 
 ViewEngine.prototype.getViewHtml = function getViewHtml(viewPath, locals, app) {
@@ -83,4 +87,8 @@ ViewEngine.prototype.getBootstrappedData = function getBootstrappedData(locals, 
     }
   });
   return bootstrappedData;
+};
+
+ViewEngine.prototype.clearCachedLayouts = function () {
+  layoutTemplates = {};
 };

@@ -24,6 +24,8 @@ function apiProxy(dataAdapter) {
       'x-forwarded-for': apiProxy.getXForwardedForHeader(req.headers, req.ip)
     };
 
+    api.headers = apiProxy.setXHTTPMethodOverride(req.headers, api.headers);
+
     dataAdapter.request(req, api, {
       convertErrorCode: false
     }, function(err, response, body) {
@@ -31,10 +33,14 @@ function apiProxy(dataAdapter) {
 
       // Pass through statusCode.
       res.status(response.statusCode);
-      res.json(body);
+      if (!response.jsonp){
+        res.json(body);
+      }else{
+        res.jsonp(body);
+      }
     });
   };
-};
+}
 
 apiProxy.getApiPath = function getApiPath(path) {
   var sepIndex = path.indexOf(separator),
@@ -60,4 +66,11 @@ apiProxy.getXForwardedForHeader = function (headers, clientIp) {
   }
 
   return newHeaderValue;
+};
+
+apiProxy.setXHTTPMethodOverride = function (requestHeaders, apiHeaders) {
+  if (requestHeaders['x-http-method-override']) {
+    apiHeaders['x-http-method-override'] = requestHeaders['x-http-method-override'];
+  }
+  return apiHeaders;
 };

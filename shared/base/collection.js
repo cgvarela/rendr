@@ -9,16 +9,18 @@ if (!isServer) {
   Backbone.$ = window.$ || require('jquery');
 }
 
-BaseCollection = Super.extend({
+var BaseCollection = Super.extend({
 
   model: BaseModel,
+  params: undefined,
+  meta: undefined,
 
   /**
    * Provide the ability to set default params for every 'fetch' call.
    */
   defaultParams: null,
 
-  initialize: function(models, options) {
+  constructor: function(models, options) {
     /**
      * Capture the options as instance variable.
      */
@@ -45,6 +47,10 @@ BaseCollection = Super.extend({
       _.extend(this.meta, this.options.meta);
       delete this.options.meta;
     }
+
+    Super.apply(this, arguments);
+
+    this.store();
   },
 
   /**
@@ -97,9 +103,11 @@ BaseCollection = Super.extend({
     options = options || {};
 
     // Each time new models are fetched, store the params used.
-    options.data = options.data || {};
-    _.defaults(options.data, this.defaultParams || {});
-    this.params = options.data;
+    if (options.data) {
+      _.defaults(options.data, this.defaultParams || {});
+      this.params = options.data;
+    }
+
     return Super.prototype.fetch.apply(this, arguments);
   },
 
@@ -107,10 +115,12 @@ BaseCollection = Super.extend({
    * Instance method to store the collection and its models.
    */
   store: function() {
-    this.each(function(model) {
-      model.store();
-    });
-    this.app.fetcher.collectionStore.set(this);
+    if (this.app && this.app.fetcher) {
+      this.each(function(model) {
+        model.store();
+      });
+      this.app.fetcher.collectionStore.set(this);
+    }
   }
 });
 

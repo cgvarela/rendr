@@ -2,9 +2,10 @@ var DataAdapter = require('./index'),
     utils = require('../utils'),
     _ = require('underscore'),
     url = require('url'),
-    request = require('request'),
+    request,
     debug = require('debug')('rendr:RestAdapter'),
-    util = require('util');
+    util = require('util'),
+    qs = require('qs2');
 
 module.exports = RestAdapter;
 
@@ -17,6 +18,8 @@ function RestAdapter(options) {
   _.defaults(this.options, {
     userAgent: 'Rendr RestAdapter; Node.js'
   });
+
+  request = this.options.request || require('request');
 }
 
 util.inherits(RestAdapter, DataAdapter);
@@ -107,17 +110,18 @@ RestAdapter.prototype.apiDefaults = function(api, req) {
 
   // If path contains a protocol, assume it's a URL.
   if (api.path && ~api.path.indexOf('://')) {
-    api.url = api.path;
+    api.url = url.format({ pathname: api.path });
     delete api.path;
   }
 
   // Can specify a particular API to use, falling back to default.
-  apiHost = this.options[api.api] || this.options['default'] || this.options || {};
+  apiHost = this.options[api.api] || this.options['default'] || this.options;
 
   urlOpts = _.defaults(
-    _.pick(api,     ['protocol', 'port', 'query']),
-    _.pick(apiHost, ['protocol', 'port', 'host'])
+    _.pick(api,     ['protocol', 'port']),
+    _.pick(apiHost, ['protocol', 'port', 'host', 'hostname'])
   );
+
   urlOpts.pathname = api.path || api.pathname;
 
   _.defaults(api, {
@@ -125,6 +129,10 @@ RestAdapter.prototype.apiDefaults = function(api, req) {
     url: url.format(urlOpts),
     headers: {}
   });
+
+  if (api.query && !_.isEmpty(api.query)) {
+    api.url += '?' + qs.stringify(api.query);
+  }
 
   // Add a default UserAgent, so some servers don't reject our request.
   if (api.headers['User-Agent'] == null) {
